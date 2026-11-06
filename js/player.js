@@ -3,7 +3,7 @@
    Netz-Polling 1 s, lokale UI-Interpolation 250 ms.
    Pausiert bei document.hidden und beim Verlassen.
    ========================================================= */
-import { registerScreen } from './app.js';
+import { registerScreen, showScreen } from './app.js';
 import * as sp from './spotify.js';
 import * as auth from './auth.js';
 
@@ -23,6 +23,7 @@ const fmt = (ms) => {
 function render(root) {
   root.innerHTML = `
     <div class="np">
+      <button class="np-devbtn" id="np-devices" title="Geräte">${icDevices}</button>
       <div class="np-art"><img id="np-img" alt="" /><div class="np-art-ph" id="np-ph"></div></div>
       <div class="np-main">
         <div class="np-title" id="np-title">—</div>
@@ -75,6 +76,8 @@ function render(root) {
   els.shuffle.addEventListener('click', onShuffle);
   els.vol.addEventListener('change', () => guard(sp.setVolume(Number(els.vol.value))));
   els.prog.addEventListener('click', onSeek);
+  const devBtn = root.querySelector('#np-devices');
+  if (devBtn) devBtn.addEventListener('click', () => showScreen('devices'));
 }
 
 /* ---------- Aktionen ---------- */
@@ -218,3 +221,4 @@ const icPrev = '<svg viewBox="0 0 24 24"><path d="M18 5l-9 7 9 7z"/><rect x="5.4
 const icShuffle = '<svg viewBox="0 0 24 24"><path d="M17 3l4 4-4 4V8h-2.5l-2 2-1.6-1.9L13 6h4V3zM3 7h4.5c1 0 1.9.4 2.6 1.2L17 16h4v-3l4 4-4 4v-3h-4c-1 0-1.9-.4-2.6-1.2L7.5 9H3V7z"/></svg>';
 const icVolDown = '<svg class="np-volico" viewBox="0 0 24 24"><path d="M4 9v6h4l5 5V4L8 9H4z"/></svg>';
 const icVolUp = '<svg class="np-volico" viewBox="0 0 24 24"><path d="M4 9v6h4l5 5V4L8 9H4zm12 3a4 4 0 0 0-2.5-3.7v7.4A4 4 0 0 0 16 12zm-2.5-8v2.1A6 6 0 0 1 13.5 20v2.1A8 8 0 0 0 13.5 4z"/></svg>';
+const icDevices = '<svg viewBox="0 0 24 24"><rect x="2" y="4" width="14" height="10" rx="2"/><rect x="13" y="10" width="9" height="10" rx="2"/><rect x="6" y="18" width="6" height="1.8" rx=".9"/></svg>';

@@ -215,6 +215,7 @@ body {
 
 /* ---------- Jetzt läuft (Now Playing) ---------- */
 .np {
+  position: relative;
   height: 100%;
   display: flex;
   align-items: center;
@@ -222,6 +223,19 @@ body {
   max-width: 880px;
   margin: 0 auto;
 }
+.np-devbtn {
+  position: absolute;
+  top: 0; right: 0;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--stroke);
+  background: var(--glass);
+  color: #fff; cursor: pointer;
+  display: grid; place-items: center;
+  transition: transform .15s var(--ease);
+}
+.np-devbtn svg { width: 24px; height: 24px; fill: currentColor; }
+.np-devbtn:active { transform: scale(.9); }
 .np-art {
   position: relative;
   flex: 0 0 auto;
@@ -351,6 +365,26 @@ body {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .pl-hint { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+
+/* ---------- Geräte ---------- */
+.dev-status { color: var(--text-dim); font-size: 15px; }
+.dev-list { display: flex; flex-direction: column; gap: 10px; max-width: 560px; }
+.dev-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--stroke);
+  border-radius: 16px;
+  background: var(--glass);
+  color: #fff; cursor: pointer; text-align: left;
+  transition: transform .14s var(--ease), background .14s var(--ease);
+}
+.dev-row:active { transform: scale(.98); }
+.dev-row.active { background: rgba(30, 215, 96, .16); border-color: rgba(30, 215, 96, .5); }
+.dev-ico svg { width: 26px; height: 26px; fill: #fff; display: block; }
+.dev-meta { flex: 1; display: flex; flex-direction: column; }
+.dev-name { font-size: 16px; font-weight: 600; }
+.dev-type { font-size: 13px; color: var(--text-dim); text-transform: capitalize; }
+.dev-check svg { width: 22px; height: 22px; fill: var(--accent); display: block; }
 
 /* ---------- Login-Overlay ---------- */
 .login-overlay {
