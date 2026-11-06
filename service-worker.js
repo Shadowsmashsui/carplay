@@ -7,6 +7,7 @@ const ASSETS = [
   'manifest.webmanifest',
   'css/style.css',
   'js/app.js',
+  'js/appicons.js',
   'js/auth.js',
   'js/spotify.js',
   'js/player.js',
