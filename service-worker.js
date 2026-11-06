@@ -1,6 +1,6 @@
-/* Service Worker — Cache-First für die statische App-Hülle.
-   Spotify-API-Calls (accounts./api.spotify.com) werden NIE gecacht. */
-const CACHE = 'carplay-v1';
+/* Service Worker — Network-First für die eigene App (immer frisch online,
+   offline aus dem Cache). Spotify-Domains werden NIE angefasst. */
+const CACHE = 'carplay-v2';
 const ASSETS = [
   '.',
   'index.html',
@@ -44,16 +44,15 @@ self.addEventListener('fetch', (e) => {
   if (url.hostname.endsWith('spotify.com')) return;
   if (e.request.method !== 'GET') return;
 
+  // Network-First: immer zuerst frisch aus dem Netz holen, Cache nur als
+  // Offline-Fallback. So wirken neue Deploys (z. B. config.js) sofort.
   e.respondWith(
-    caches.match(e.request).then((hit) =>
-      hit || fetch(e.request).then((res) => {
-        // nur gleiche Herkunft nachcachen
-        if (url.origin === self.location.origin && res.ok) {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(e.request, copy));
-        }
-        return res;
-      }).catch(() => hit)
-    )
+    fetch(e.request).then((res) => {
+      if (url.origin === self.location.origin && res.ok) {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(e.request, copy));
+      }
+      return res;
+    }).catch(() => caches.match(e.request))
   );
 });
