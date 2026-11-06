@@ -1,7 +1,9 @@
 /* =========================================================
    app.js — Shell: Icon-Registry, Screen-Router, Dock,
-   Home-Raster, Uhr, PWA-Registrierung.
+   Home-Raster, Uhr, PWA-Registrierung, Login-Gate.
    ========================================================= */
+import * as auth from './auth.js';
+import { getAppIcon } from './appicons.js';
 
 /* ---------- SVG-Icons (inline, einfarbig, fill=currentColor) ---------- */
 export const ICONS = {
@@ -87,48 +89,49 @@ function placeholderScreen(id) {
 /* ---------- Home-Screen (App-Raster) ---------- */
 registerScreen('home', {
   render(root) {
+    const wrap = document.createElement('div');
+    wrap.className = 'home-wrap';
+
     const grid = document.createElement('div');
     grid.className = 'home-grid';
     for (const app of APPS) {
       const tile = document.createElement('button');
       tile.className = 'app-tile';
       tile.innerHTML = `
-        <span class="icon ${app.grad}">${ICONS[app.icon] || ''}</span>
+        <span class="icon">${getAppIcon(app.id)}</span>
         <span class="label">${app.label}</span>`;
       tile.addEventListener('click', () => showScreen(app.id));
       grid.appendChild(tile);
     }
-    root.appendChild(grid);
+    wrap.appendChild(grid);
+
+    const dots = document.createElement('div');
+    dots.className = 'page-dots';
+    dots.innerHTML = '<span class="dot active"></span><span class="dot"></span>';
+    wrap.appendChild(dots);
+
+    root.appendChild(wrap);
   }
 });
 
 /* ---------- Dock aufbauen ---------- */
 function buildDock() {
-  const dock = document.getElementById('dock');
-  dock.replaceChildren();
+  const dockApps = document.getElementById('dock-apps');
+  dockApps.replaceChildren();
   for (const app of APPS.filter(a => a.dock)) {
     const btn = document.createElement('button');
-    btn.className = `dock-btn ${app.grad}`;
+    btn.className = 'dock-app';
     btn.dataset.id = app.id;
     btn.title = app.label;
-    btn.innerHTML = ICONS[app.icon] || '';
+    btn.innerHTML = getAppIcon(app.id);
     btn.addEventListener('click', () => showScreen(app.id));
-    dock.appendChild(btn);
+    dockApps.appendChild(btn);
   }
-  const spacer = document.createElement('div');
-  spacer.className = 'dock-spacer';
-  dock.appendChild(spacer);
-
-  const homeBtn = document.createElement('button');
-  homeBtn.className = 'dock-home';
-  homeBtn.title = 'Home';
-  homeBtn.innerHTML = ICONS.home;
-  homeBtn.addEventListener('click', () => showScreen('home'));
-  dock.appendChild(homeBtn);
+  document.getElementById('dock-home').addEventListener('click', () => showScreen('home'));
 }
 
 function updateDockActive(id) {
-  document.querySelectorAll('.dock-btn').forEach(b => {
+  document.querySelectorAll('.dock-app').forEach(b => {
     b.classList.toggle('active', b.dataset.id === id);
   });
 }
@@ -163,13 +166,38 @@ function registerSW() {
   }
 }
 
-/* ---------- Spätere Screen-Module nachladen (fehlertolerant) ---------- */
+/* ---------- Screen-Module nachladen (fehlertolerant) ---------- */
 async function loadScreenModules() {
-  const mods = ['auth.js', 'spotify.js', 'player.js', 'playlists.js', 'devices.js', 'settings.js', 'decor.js'];
+  const mods = ['player.js', 'playlists.js', 'devices.js', 'settings.js', 'decor.js'];
   for (const m of mods) {
     try { await import(`./${m}`); }
     catch (e) { /* Modul existiert in diesem Task evtl. noch nicht */ }
   }
+}
+
+/* ---------- Login-Screen ---------- */
+function showLogin() {
+  const app = document.getElementById('app');
+  const ov = document.createElement('div');
+  ov.className = 'login-overlay';
+  ov.innerHTML = `
+    <div class="login-card panel">
+      <div class="login-logo ${/*grün*/''}">${ICONS.music}</div>
+      <h1>CarPlay</h1>
+      <p>Mit Spotify verbinden, um deine Musik zu steuern.</p>
+      <button id="login-btn" class="login-btn">Mit Spotify verbinden</button>
+      <button id="skip-btn" class="skip-btn">Ohne Login ansehen</button>
+    </div>`;
+  app.appendChild(ov);
+  ov.querySelector('#login-btn').addEventListener('click', () => auth.login());
+  ov.querySelector('#skip-btn').addEventListener('click', () => {
+    ov.remove();
+    enterUI();
+  });
+}
+
+function enterUI() {
+  showScreen('home');
 }
 
 /* ---------- Start ---------- */
@@ -177,10 +205,24 @@ async function boot() {
   buildDock();
   startClock();
   registerSW();
+
+  // Spotify-Redirect verarbeiten (nach Login kehrt man mit ?code zurück)
+  let loggedIn = false;
+  try {
+    await auth.handleRedirectCallback();
+    loggedIn = auth.isLoggedIn();
+  } catch (e) { console.error(e); }
+
   await loadScreenModules();
-  // settings.js setzt (falls geladen) den gespeicherten Hintergrund
   if (window.__applyWallpaper) { try { window.__applyWallpaper(); } catch (e) {} }
-  showScreen('home');
+
+  if (loggedIn) {
+    enterUI();
+  } else {
+    // Shell im Hintergrund zeigen, Login-Overlay darüber
+    showScreen('home');
+    showLogin();
+  }
 }
 
 document.addEventListener('DOMContentLoaded', boot);
