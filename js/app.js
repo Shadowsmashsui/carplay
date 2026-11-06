@@ -1,0 +1,186 @@
+/* =========================================================
+   app.js — Shell: Icon-Registry, Screen-Router, Dock,
+   Home-Raster, Uhr, PWA-Registrierung.
+   ========================================================= */
+
+/* ---------- SVG-Icons (inline, einfarbig, fill=currentColor) ---------- */
+export const ICONS = {
+  music: '<svg viewBox="0 0 24 24"><path d="M9 17V5l10-2v11"/><circle cx="6.5" cy="17.5" r="2.6"/><circle cx="16.5" cy="14.5" r="2.6"/></svg>',
+  list: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="12" height="2.4" rx="1.2"/><rect x="3" y="11" width="12" height="2.4" rx="1.2"/><rect x="3" y="17" width="9" height="2.4" rx="1.2"/><circle cx="18.5" cy="16.5" r="2.4"/><rect x="20.3" y="7" width="1.6" height="9.5"/></svg>',
+  maps: '<svg viewBox="0 0 24 24"><path d="M12 2a6 6 0 0 0-6 6c0 4.2 6 12 6 12s6-7.8 6-12a6 6 0 0 0-6-6zm0 8.2A2.2 2.2 0 1 1 12 5.8a2.2 2.2 0 0 1 0 4.4z"/></svg>',
+  settings: '<svg viewBox="0 0 24 24"><path d="M19.4 13a7.8 7.8 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-1.7-1l-.4-2.6H10.9l-.4 2.6a7.6 7.6 0 0 0-1.7 1l-2.4-1-2 3.4L4.4 11a7.8 7.8 0 0 0 0 2l-2 1.6 2 3.4 2.4-1c.5.4 1.1.7 1.7 1l.4 2.6h4.2l.4-2.6c.6-.3 1.2-.6 1.7-1l2.4 1 2-3.4-2-1.6zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>',
+  phone: '<svg viewBox="0 0 24 24"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.24 11.4 11.4 0 0 0 3.6.58 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.3a1 1 0 0 1 1 1 11.4 11.4 0 0 0 .58 3.6 1 1 0 0 1-.24 1z"/></svg>',
+  messages: '<svg viewBox="0 0 24 24"><path d="M12 3C6.9 3 3 6.3 3 10.4c0 2.2 1.1 4.1 2.9 5.5-.2 1.2-.8 2.3-1.7 3.1 1.6-.1 3.1-.6 4.3-1.4 1 .3 2.1.5 3.5.5 5.1 0 9-3.3 9-7.7S17.1 3 12 3z"/></svg>',
+  calendar: '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="16" rx="3"/><rect x="3.5" y="4.5" width="17" height="5" rx="3" fill="#ff3b30"/><rect x="7" y="2.5" width="2" height="4" rx="1" fill="#ff3b30"/><rect x="15" y="2.5" width="2" height="4" rx="1" fill="#ff3b30"/></svg>',
+  clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.3" fill="none" stroke="#fff" stroke-width="1.6"/><path d="M12 7v5.4l3.4 2" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  home: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>',
+};
+
+/* ---------- App-Katalog ---------- */
+/* dock: erscheint in der linken Leiste. funktional wird in späteren Tasks gesetzt. */
+export const APPS = [
+  { id: 'player',   label: 'Jetzt läuft',  icon: 'music',    grad: 'grad-music',    dock: true },
+  { id: 'playlists',label: 'Playlists',    icon: 'list',     grad: 'grad-list',     dock: true },
+  { id: 'maps',     label: 'Karten',       icon: 'maps',     grad: 'grad-maps',     dock: true },
+  { id: 'settings', label: 'Einstellungen',icon: 'settings', grad: 'grad-settings', dock: true },
+  { id: 'phone',    label: 'Telefon',      icon: 'phone',    grad: 'grad-phone' },
+  { id: 'messages', label: 'Nachrichten',  icon: 'messages', grad: 'grad-messages' },
+  { id: 'calendar', label: 'Kalender',     icon: 'calendar', grad: 'grad-calendar' },
+  { id: 'clock',    label: 'Uhr',          icon: 'clock',    grad: 'grad-clock' },
+];
+
+/* ---------- Screen-Registry & Router ---------- */
+const screens = {};
+let currentId = null;
+let currentDef = null;
+
+/** Screen registrieren. def: { render(root), onEnter?(), onLeave?() } */
+export function registerScreen(id, def) {
+  screens[id] = def;
+}
+
+/** Aktiven Screen wechseln (mit Überblendung). */
+export function showScreen(id) {
+  if (id === currentId) return;
+  const root = document.getElementById('screen-root');
+
+  // alten Screen verlassen
+  if (currentDef && typeof currentDef.onLeave === 'function') {
+    try { currentDef.onLeave(); } catch (e) { console.error(e); }
+  }
+
+  const def = screens[id] || placeholderScreen(id);
+  currentId = id;
+  currentDef = def;
+
+  const el = document.createElement('section');
+  el.className = 'screen';
+  try { def.render(el); } catch (e) { console.error(e); }
+
+  root.replaceChildren(el);
+  // enter-Animation im nächsten Frame
+  requestAnimationFrame(() => el.classList.add('enter'));
+
+  if (typeof def.onEnter === 'function') {
+    try { def.onEnter(el); } catch (e) { console.error(e); }
+  }
+  updateDockActive(id);
+}
+
+/** Fallback für (noch) nicht registrierte Apps. */
+function placeholderScreen(id) {
+  const app = APPS.find(a => a.id === id);
+  const name = app ? app.label : id;
+  return {
+    render(root) {
+      root.innerHTML = `
+        <div class="center-note">
+          <div>
+            <div class="big">${name}</div>
+            <div class="sub">In dieser Version noch nicht verfügbar.</div>
+          </div>
+        </div>`;
+    }
+  };
+}
+
+/* ---------- Home-Screen (App-Raster) ---------- */
+registerScreen('home', {
+  render(root) {
+    const grid = document.createElement('div');
+    grid.className = 'home-grid';
+    for (const app of APPS) {
+      const tile = document.createElement('button');
+      tile.className = 'app-tile';
+      tile.innerHTML = `
+        <span class="icon ${app.grad}">${ICONS[app.icon] || ''}</span>
+        <span class="label">${app.label}</span>`;
+      tile.addEventListener('click', () => showScreen(app.id));
+      grid.appendChild(tile);
+    }
+    root.appendChild(grid);
+  }
+});
+
+/* ---------- Dock aufbauen ---------- */
+function buildDock() {
+  const dock = document.getElementById('dock');
+  dock.replaceChildren();
+  for (const app of APPS.filter(a => a.dock)) {
+    const btn = document.createElement('button');
+    btn.className = `dock-btn ${app.grad}`;
+    btn.dataset.id = app.id;
+    btn.title = app.label;
+    btn.innerHTML = ICONS[app.icon] || '';
+    btn.addEventListener('click', () => showScreen(app.id));
+    dock.appendChild(btn);
+  }
+  const spacer = document.createElement('div');
+  spacer.className = 'dock-spacer';
+  dock.appendChild(spacer);
+
+  const homeBtn = document.createElement('button');
+  homeBtn.className = 'dock-home';
+  homeBtn.title = 'Home';
+  homeBtn.innerHTML = ICONS.home;
+  homeBtn.addEventListener('click', () => showScreen('home'));
+  dock.appendChild(homeBtn);
+}
+
+function updateDockActive(id) {
+  document.querySelectorAll('.dock-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.id === id);
+  });
+}
+
+/* ---------- Uhr ---------- */
+function startClock() {
+  const el = document.getElementById('clock');
+  const tick = () => {
+    const d = new Date();
+    const fmt = (localStorage.getItem('clockFormat') || '24');
+    let h = d.getHours();
+    const m = String(d.getMinutes()).padStart(2, '0');
+    if (fmt === '12') {
+      const ap = h >= 12 ? 'PM' : 'AM';
+      h = h % 12 || 12;
+      el.textContent = `${h}:${m} ${ap}`;
+    } else {
+      el.textContent = `${String(h).padStart(2, '0')}:${m}`;
+    }
+  };
+  tick();
+  setInterval(tick, 1000);
+}
+
+/* ---------- Service Worker ---------- */
+function registerSW() {
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js').catch(err =>
+        console.warn('SW-Registrierung fehlgeschlagen:', err));
+    });
+  }
+}
+
+/* ---------- Spätere Screen-Module nachladen (fehlertolerant) ---------- */
+async function loadScreenModules() {
+  const mods = ['auth.js', 'spotify.js', 'player.js', 'playlists.js', 'devices.js', 'settings.js', 'decor.js'];
+  for (const m of mods) {
+    try { await import(`./${m}`); }
+    catch (e) { /* Modul existiert in diesem Task evtl. noch nicht */ }
+  }
+}
+
+/* ---------- Start ---------- */
+async function boot() {
+  buildDock();
+  startClock();
+  registerSW();
+  await loadScreenModules();
+  // settings.js setzt (falls geladen) den gespeicherten Hintergrund
+  if (window.__applyWallpaper) { try { window.__applyWallpaper(); } catch (e) {} }
+  showScreen('home');
+}
+
+document.addEventListener('DOMContentLoaded', boot);
