@@ -104,11 +104,58 @@ const list = `
   </g>
 </svg>`;
 
+const searchIco = `
+<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+  <defs><linearGradient id="seg" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#3ad0e0"/><stop offset="1" stop-color="#1f8fd0"/></linearGradient></defs>
+  <rect width="60" height="60" rx="${R}" fill="url(#seg)"/>
+  <circle cx="27" cy="27" r="10" fill="none" stroke="#fff" stroke-width="4"/>
+  <rect x="34" y="34" width="13" height="4.6" rx="2.3" transform="rotate(45 34 34)" fill="#fff"/>
+</svg>`;
+
+const recentIco = `
+<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+  <defs><linearGradient id="reg" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#ffb13c"/><stop offset="1" stop-color="#ff7a2f"/></linearGradient></defs>
+  <rect width="60" height="60" rx="${R}" fill="url(#reg)"/>
+  <path d="M30 16a14 14 0 1 0 13.6 17" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+  <path d="M30 16l-5 1 3 4z" fill="#fff"/>
+  <path d="M30 23v8l6 3.5" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/>
+</svg>`;
+
+const queueIco = `
+<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+  <defs><linearGradient id="qeg" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#53e08a"/><stop offset="1" stop-color="#1db954"/></linearGradient></defs>
+  <rect width="60" height="60" rx="${R}" fill="url(#qeg)"/>
+  <g fill="#fff">
+    <rect x="16" y="20" width="21" height="3.6" rx="1.8"/>
+    <rect x="16" y="28.2" width="21" height="3.6" rx="1.8"/>
+    <rect x="16" y="36.4" width="13" height="3.6" rx="1.8"/>
+    <path d="M40 34l9 5.2-9 5.2z"/>
+  </g>
+</svg>`;
+
+const libraryIco = `
+<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+  <defs><linearGradient id="leg" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#b06bff"/><stop offset="1" stop-color="#7a3df0"/></linearGradient></defs>
+  <rect width="60" height="60" rx="${R}" fill="url(#leg)"/>
+  <g fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round">
+    <path d="M19 17v26"/><path d="M26 17v26"/>
+  </g>
+  <rect x="31" y="19" width="7.5" height="24" rx="2" transform="rotate(12 34 31)" fill="#fff"/>
+</svg>`;
+
 /** Liefert das SVG für eine App-ID (volle Icon-Grafik). */
 export function getAppIcon(id) {
   switch (id) {
     case 'player': return nowplaying;
     case 'playlists': return list;
+    case 'search': return searchIco;
+    case 'recent': return recentIco;
+    case 'queue': return queueIco;
+    case 'library': return libraryIco;
     case 'maps': return maps;
     case 'settings': return settingsGear;
     case 'phone': return phone;

@@ -1,6 +1,6 @@
 /* Service Worker — Network-First für die eigene App (immer frisch online,
    offline aus dem Cache). Spotify-Domains werden NIE angefasst. */
-const CACHE = 'carplay-v2';
+const CACHE = 'carplay-v3';
 const ASSETS = [
   '.',
   'index.html',
@@ -10,11 +10,16 @@ const ASSETS = [
   'js/appicons.js',
   'js/auth.js',
   'js/spotify.js',
+  'js/ui.js',
   'js/player.js',
   'js/playlists.js',
   'js/devices.js',
   'js/settings.js',
   'js/decor.js',
+  'js/search.js',
+  'js/recent.js',
+  'js/queue.js',
+  'js/library.js',
   'config.js',
   'icons/app-icon-180.png',
   'icons/app-icon-192.png',

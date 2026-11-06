@@ -38,6 +38,12 @@ async function load() {
       return;
     }
     status.hidden = true;
+    // "Immer PC als Ziel": automatisch das Computer-Gerät wählen
+    let preferPc = false; try { preferPc = localStorage.getItem('preferComputer') === '1'; } catch (e) {}
+    if (preferPc) {
+      const pc = devices.find(d => (d.type || '').toLowerCase().includes('computer'));
+      if (pc && getSelectedDeviceId() !== pc.id) { setSelected(pc.id); try { await sp.transferPlayback(pc.id, false); } catch (e) {} }
+    }
     const selected = getSelectedDeviceId();
     for (const d of devices) {
       const isActive = d.is_active || d.id === selected;

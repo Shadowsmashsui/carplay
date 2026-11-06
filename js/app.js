@@ -19,17 +19,45 @@ export const ICONS = {
 };
 
 /* ---------- App-Katalog ---------- */
-/* dock: erscheint in der linken Leiste. funktional wird in späteren Tasks gesetzt. */
-export const APPS = [
-  { id: 'player',   label: 'Jetzt läuft',  icon: 'music',    grad: 'grad-music',    dock: true },
-  { id: 'playlists',label: 'Playlists',    icon: 'list',     grad: 'grad-list',     dock: true },
-  { id: 'maps',     label: 'Karten',       icon: 'maps',     grad: 'grad-maps',     dock: true },
-  { id: 'settings', label: 'Einstellungen',icon: 'settings', grad: 'grad-settings', dock: true },
-  { id: 'phone',    label: 'Telefon',      icon: 'phone',    grad: 'grad-phone' },
-  { id: 'messages', label: 'Nachrichten',  icon: 'messages', grad: 'grad-messages' },
-  { id: 'calendar', label: 'Kalender',     icon: 'calendar', grad: 'grad-calendar' },
-  { id: 'clock',    label: 'Uhr',          icon: 'clock',    grad: 'grad-clock' },
+/* dock: erscheint standardmäßig in der linken Leiste. */
+export const APP_CATALOG = [
+  { id: 'player',    label: 'Jetzt läuft',   dock: true },
+  { id: 'playlists', label: 'Playlists',     dock: true },
+  { id: 'search',    label: 'Suche',         dock: true },
+  { id: 'recent',    label: 'Zuletzt gespielt' },
+  { id: 'queue',     label: 'Warteschlange' },
+  { id: 'library',   label: 'Bibliothek' },
+  { id: 'maps',      label: 'Karten' },
+  { id: 'settings',  label: 'Einstellungen', dock: true },
+  { id: 'phone',     label: 'Telefon' },
+  { id: 'messages',  label: 'Nachrichten' },
+  { id: 'calendar',  label: 'Kalender' },
+  { id: 'clock',     label: 'Uhr' },
 ];
+
+function readJsonArray(key) {
+  try { const v = JSON.parse(localStorage.getItem(key)); return Array.isArray(v) ? v : []; }
+  catch (e) { return []; }
+}
+
+/** Apps in gespeicherter Reihenfolge + hidden-Flag. */
+export function getApps() {
+  const order = readJsonArray('appOrder');
+  const hidden = readJsonArray('appsHidden');
+  const byId = Object.fromEntries(APP_CATALOG.map(a => [a.id, a]));
+  const seen = new Set();
+  const out = [];
+  for (const id of order) { if (byId[id] && !seen.has(id)) { out.push(byId[id]); seen.add(id); } }
+  for (const a of APP_CATALOG) { if (!seen.has(a.id)) { out.push(a); seen.add(a.id); } }
+  return out.map(a => ({ ...a, hidden: hidden.includes(a.id) }));
+}
+export function getVisibleApps() { return getApps().filter(a => !a.hidden); }
+
+/** Dock + Home neu aufbauen (nach Einstellungs-Änderung). */
+export function rebuildShell() {
+  buildDock();
+  if (currentId === 'home') { currentId = null; showScreen('home'); }
+}
 
 /* ---------- Screen-Registry & Router ---------- */
 const screens = {};
@@ -71,7 +99,7 @@ export function showScreen(id) {
 
 /** Fallback für (noch) nicht registrierte Apps. */
 function placeholderScreen(id) {
-  const app = APPS.find(a => a.id === id);
+  const app = APP_CATALOG.find(a => a.id === id);
   const name = app ? app.label : id;
   return {
     render(root) {
@@ -94,7 +122,7 @@ registerScreen('home', {
 
     const grid = document.createElement('div');
     grid.className = 'home-grid';
-    for (const app of APPS) {
+    for (const app of getVisibleApps()) {
       const tile = document.createElement('button');
       tile.className = 'app-tile';
       tile.innerHTML = `
@@ -118,7 +146,7 @@ registerScreen('home', {
 function buildDock() {
   const dockApps = document.getElementById('dock-apps');
   dockApps.replaceChildren();
-  for (const app of APPS.filter(a => a.dock)) {
+  for (const app of getVisibleApps().filter(a => a.dock)) {
     const btn = document.createElement('button');
     btn.className = 'dock-app';
     btn.dataset.id = app.id;
@@ -168,7 +196,8 @@ function registerSW() {
 
 /* ---------- Screen-Module nachladen (fehlertolerant) ---------- */
 async function loadScreenModules() {
-  const mods = ['player.js', 'playlists.js', 'devices.js', 'settings.js', 'decor.js'];
+  const mods = ['player.js', 'playlists.js', 'devices.js', 'settings.js', 'decor.js',
+    'search.js', 'recent.js', 'queue.js', 'library.js'];
   for (const m of mods) {
     try { await import(`./${m}`); }
     catch (e) { /* Modul existiert in diesem Task evtl. noch nicht */ }
@@ -215,6 +244,9 @@ async function boot() {
 
   await loadScreenModules();
   if (window.__applyWallpaper) { try { window.__applyWallpaper(); } catch (e) {} }
+  if (window.__applyTheme) { try { window.__applyTheme(); } catch (e) {} }
+  if (window.__applyAccent) { try { window.__applyAccent(); } catch (e) {} }
+  if (window.__applyMotion) { try { window.__applyMotion(); } catch (e) {} }
 
   if (loggedIn) {
     enterUI();

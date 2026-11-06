@@ -12,6 +12,16 @@ export class RateLimitError extends Error {
 export class NoTokenError extends Error {
   constructor() { super('no_token'); this.name = 'NoTokenError'; }
 }
+export class ForbiddenError extends Error {
+  constructor() { super('forbidden'); this.name = 'ForbiddenError'; }
+}
+
+function q(params) {
+  return Object.entries(params)
+    .filter(([, v]) => v != null && v !== '')
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join('&');
+}
 
 async function request(method, path, body, _retried = false) {
   const token = await getAccessToken();
@@ -34,6 +44,7 @@ async function request(method, path, body, _retried = false) {
     const ra = parseInt(res.headers.get('Retry-After') || '1', 10);
     throw new RateLimitError(isNaN(ra) ? 1 : ra);
   }
+  if (res.status === 403) throw new ForbiddenError();
   if (res.status === 204 || res.status === 202) return null;
   if (!res.ok) throw new Error(`api_${res.status}`);
 
@@ -80,6 +91,57 @@ export async function getPlaylists() {
 }
 export function startContext(contextUri, deviceId) {
   return play({ context_uri: contextUri, deviceId });
+}
+export async function getPlaylistTracks(playlistId, limit = 100) {
+  const data = await request('GET', `/playlists/${playlistId}/tracks?limit=${limit}`);
+  return data && data.items ? data.items.map(i => i.track).filter(Boolean) : [];
+}
+/** Playlist/Album ab einem bestimmten Track starten. */
+export function playContextAt(contextUri, trackUri, deviceId) {
+  return play({ context_uri: contextUri, offset: { uri: trackUri }, deviceId });
+}
+export function playUris(uris, deviceId) {
+  return play({ uris: Array.isArray(uris) ? uris : [uris], deviceId });
+}
+
+/* ---------- Suche ---------- */
+export async function search(query, types = 'track,playlist,album', limit = 20) {
+  if (!query || !query.trim()) return { tracks: [], playlists: [], albums: [] };
+  const data = await request('GET', `/search?${q({ q: query, type: types, limit })}`);
+  return {
+    tracks: data && data.tracks ? data.tracks.items.filter(Boolean) : [],
+    playlists: data && data.playlists ? data.playlists.items.filter(Boolean) : [],
+    albums: data && data.albums ? data.albums.items.filter(Boolean) : [],
+  };
+}
+
+/* ---------- Zuletzt gespielt ---------- */
+export async function getRecentlyPlayed(limit = 30) {
+  const data = await request('GET', `/me/player/recently-played?limit=${limit}`);
+  return data && data.items ? data.items : [];
+}
+
+/* ---------- Warteschlange ---------- */
+export async function getQueue() {
+  const data = await request('GET', '/me/player/queue');
+  return {
+    current: data ? data.currently_playing : null,
+    queue: data && data.queue ? data.queue : [],
+  };
+}
+export function addToQueue(uri, deviceId) {
+  const dev = deviceId ? `&device_id=${encodeURIComponent(deviceId)}` : '';
+  return request('POST', `/me/player/queue?uri=${encodeURIComponent(uri)}${dev}`);
+}
+
+/* ---------- Bibliothek ---------- */
+export async function getSavedAlbums(limit = 50) {
+  const data = await request('GET', `/me/albums?limit=${limit}`);
+  return data && data.items ? data.items.map(i => i.album).filter(Boolean) : [];
+}
+export async function getFollowedArtists(limit = 50) {
+  const data = await request('GET', `/me/following?type=artist&limit=${limit}`);
+  return data && data.artists && data.artists.items ? data.artists.items : [];
 }
 
 /* ---------- Geräte ---------- */
