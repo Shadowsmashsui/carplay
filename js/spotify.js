@@ -7,10 +7,10 @@ import { getAccessToken } from './auth.js';
 const API = 'https://api.spotify.com/v1';
 
 export class RateLimitError extends Error {
-  constructor(retryAfter) { super('rate_limited'); this.retryAfter = retryAfter; }
+  constructor(retryAfter) { super('rate_limited'); this.name = 'RateLimitError'; this.retryAfter = retryAfter; }
 }
 export class NoTokenError extends Error {
-  constructor() { super('no_token'); }
+  constructor() { super('no_token'); this.name = 'NoTokenError'; }
 }
 
 async function request(method, path, body, _retried = false) {
