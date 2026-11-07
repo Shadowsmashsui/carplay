@@ -15,6 +15,9 @@ export class NoTokenError extends Error {
 export class ForbiddenError extends Error {
   constructor() { super('forbidden'); this.name = 'ForbiddenError'; }
 }
+export class NoDeviceError extends Error {
+  constructor() { super('no_device'); this.name = 'NoDeviceError'; }
+}
 
 function q(params) {
   return Object.entries(params)
@@ -89,8 +92,8 @@ export async function getPlaylists() {
   const data = await request('GET', '/me/playlists?limit=50');
   return data && data.items ? data.items.filter(Boolean) : [];
 }
-export function startContext(contextUri, deviceId) {
-  return play({ context_uri: contextUri, deviceId });
+export function startContext(contextUri) {
+  return startPlayback({ context_uri: contextUri });
 }
 export async function getPlaylistTracks(playlistId) {
   // Hinweis: Der dedizierte Sub-Endpoint /playlists/{id}/tracks wird von Spotify
@@ -105,11 +108,53 @@ export async function getPlaylistTracks(playlistId) {
   return arr.map((w) => w.track || w.item).filter(Boolean);
 }
 /** Playlist/Album ab einem bestimmten Track starten. */
-export function playContextAt(contextUri, trackUri, deviceId) {
-  return play({ context_uri: contextUri, offset: { uri: trackUri }, deviceId });
+export function playContextAt(contextUri, trackUri) {
+  return startPlayback({ context_uri: contextUri, offset: { uri: trackUri } });
 }
-export function playUris(uris, deviceId) {
-  return play({ uris: Array.isArray(uris) ? uris : [uris], deviceId });
+export function playUris(uris) {
+  return startPlayback({ uris: Array.isArray(uris) ? uris : [uris] });
+}
+
+/* ---------- Zielgerät-Auflösung ----------
+   Problem: Die App speicherte eine feste Geräte-ID. War das Gerät nicht mehr
+   erreichbar (Spotify am PC zu/idle beim Zocken), gab der Play-Call 404
+   "Device not found" und die App startete still nichts. Jetzt lösen wir vor
+   jedem Start ein gültiges, steuerbares Gerät auf und räumen tote IDs auf. */
+const DEVICE_KEY = 'sp_device_id';
+function savedDevice() { try { return localStorage.getItem(DEVICE_KEY) || null; } catch (e) { return null; } }
+function rememberDevice(id) { try { if (id) localStorage.setItem(DEVICE_KEY, id); } catch (e) {} }
+function preferComputer() { try { return localStorage.getItem('preferComputer') === '1'; } catch (e) { return false; } }
+
+/** Gibt eine gültige Geräte-ID zurück (oder undefined, wenn keins erreichbar). */
+export async function resolveDeviceId(force = false) {
+  let devices = [];
+  try { devices = await getDevices(); } catch (e) { devices = []; }
+  const usable = devices.filter((d) => d && d.id && !d.is_restricted);
+  if (!usable.length) return undefined;
+  const saved = savedDevice();
+  if (!force && saved && usable.some((d) => d.id === saved)) return saved;
+  const active = usable.find((d) => d.is_active);
+  const computer = usable.find((d) => (d.type || '').toLowerCase().includes('computer'));
+  const pick = preferComputer() ? (computer || active || usable[0])
+                                : (active || computer || usable[0]);
+  if (pick) { rememberDevice(pick.id); return pick.id; }
+  return undefined;
+}
+
+/** Wiedergabe starten – mit Geräte-Auflösung und einmaligem Retry bei 404. */
+async function startPlayback(opts) {
+  const deviceId = await resolveDeviceId();
+  if (!deviceId) throw new NoDeviceError();
+  try {
+    return await play({ ...opts, deviceId });
+  } catch (e) {
+    if (e && e.message === 'api_404') {           // Gerät zwischenzeitlich weg
+      const fresh = await resolveDeviceId(true);
+      if (!fresh) throw new NoDeviceError();
+      return await play({ ...opts, deviceId: fresh });
+    }
+    throw e;
+  }
 }
 
 /* ---------- Suche ---------- */
@@ -139,7 +184,8 @@ export async function getQueue() {
     queue: data && data.queue ? data.queue.filter(Boolean) : [],
   };
 }
-export function addToQueue(uri, deviceId) {
+export async function addToQueue(uri) {
+  const deviceId = await resolveDeviceId();
   const dev = deviceId ? `&device_id=${encodeURIComponent(deviceId)}` : '';
   return request('POST', `/me/player/queue?uri=${encodeURIComponent(uri)}${dev}`);
 }
