@@ -92,9 +92,17 @@ export async function getPlaylists() {
 export function startContext(contextUri, deviceId) {
   return play({ context_uri: contextUri, deviceId });
 }
-export async function getPlaylistTracks(playlistId, limit = 100) {
-  const data = await request('GET', `/playlists/${playlistId}/tracks?limit=${limit}`);
-  return data && data.items ? data.items.map(i => i.track).filter(Boolean) : [];
+export async function getPlaylistTracks(playlistId) {
+  // Hinweis: Der dedizierte Sub-Endpoint /playlists/{id}/tracks wird von Spotify
+  // für viele Apps mit 403 blockiert. Der Objekt-Endpoint /playlists/{id} liefert
+  // die Tracks mit Status 200. Die Antwortform variiert allerdings:
+  //  - Standard:  data.tracks.items[].track
+  //  - Variante:  data.items.items[].item
+  // Deshalb lesen wir beide Formen robust aus (kein fields-Filter, der bricht die Variante).
+  const data = await request('GET', `/playlists/${playlistId}`);
+  const paging = (data && (data.tracks || data.items)) || null;
+  const arr = paging && Array.isArray(paging.items) ? paging.items : [];
+  return arr.map((w) => w.track || w.item).filter(Boolean);
 }
 /** Playlist/Album ab einem bestimmten Track starten. */
 export function playContextAt(contextUri, trackUri, deviceId) {

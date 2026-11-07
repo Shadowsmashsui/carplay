@@ -83,6 +83,8 @@ async function renderDetail(pl) {
     try { const st = await sp.getPlaybackState(); currentId = st && st.item ? st.item.id : null; } catch (e) {}
     if (!tracks.length) { tstatus.innerHTML = 'Keine Titel.'; return; }
     tstatus.hidden = true;
+    const sub = rootEl.querySelector('.det-sub');
+    if (sub && !sub.textContent) sub.textContent = tracks.length + ' Titel';
     tracks.forEach((t, i) => {
       const row = document.createElement('button');
       row.className = 'track-row' + (t.id && t.id === currentId ? ' playing' : '');
