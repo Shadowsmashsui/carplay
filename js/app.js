@@ -249,6 +249,8 @@ async function boot() {
   if (window.__applyMotion) { try { window.__applyMotion(); } catch (e) {} }
 
   if (loggedIn) {
+    // Token aus der Zeit vor neuen Berechtigungen? -> einmaliger Reconnect.
+    if (auth.needsReauth()) { auth.login(); return; }
     enterUI();
   } else {
     // Shell im Hintergrund zeigen, Login-Overlay darüber

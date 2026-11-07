@@ -12,6 +12,7 @@ const LS = {
   refresh: 'sp_refresh_token',
   expires: 'sp_expires_at',     // ms-Zeitstempel
   verifier: 'sp_pkce_verifier',
+  scope: 'sp_scope',
 };
 
 /* ---------- PKCE-Helfer ---------- */
@@ -91,11 +92,12 @@ export async function handleRedirectCallback() {
   }
 }
 
-/* ---------- Access-Token holen (mit Auto-Refresh) ---------- */
-export async function getAccessToken() {
+/* ---------- Access-Token holen (mit Auto-Refresh) ----------
+   force=true überspringt den Cache und erzwingt einen Refresh. */
+export async function getAccessToken(force = false) {
   const access = safeGet(LS.access);
   const expires = Number(safeGet(LS.expires) || 0);
-  if (access && Date.now() < expires - 60000) return access;
+  if (!force && access && Date.now() < expires - 60000) return access;
 
   const refresh = safeGet(LS.refresh);
   if (!refresh) return null;
@@ -111,7 +113,12 @@ export async function getAccessToken() {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      // Refresh-Token ungültig/widerrufen -> Tokens löschen, damit die App
+      // wieder den Login anbietet statt leerer Listen.
+      if (res.status === 400 || res.status === 401) logout();
+      return null;
+    }
     const data = await res.json();
     storeToken(data);
     return safeGet(LS.access);
@@ -120,12 +127,30 @@ export async function getAccessToken() {
   }
 }
 
+/** Fehlende benötigte Scopes gegenüber den erteilten (aus der Token-Antwort). */
+export function missingScopes() {
+  const granted = new Set((safeGet(LS.scope) || '').split(' ').filter(Boolean));
+  return SCOPES.split(' ').filter(Boolean).filter((s) => !granted.has(s));
+}
+
+/** true, wenn ein gültiger Login besteht, aber Berechtigungen fehlen
+    (z. B. Token aus der Zeit vor neuen Scopes) -> einmaliger Reconnect. */
+export function needsReauth() {
+  if (!isLoggedIn()) return false;
+  if (missingScopes().length === 0) return false;
+  try {
+    if (sessionStorage.getItem('sp_reauth_tried')) return false;
+    sessionStorage.setItem('sp_reauth_tried', '1');
+  } catch (e) {}
+  return true;
+}
+
 export function isLoggedIn() {
   return !!safeGet(LS.refresh) || (!!safeGet(LS.access) && Date.now() < Number(safeGet(LS.expires) || 0));
 }
 
 export function logout() {
-  [LS.access, LS.refresh, LS.expires, LS.verifier, 'sp_state'].forEach((k) => {
+  [LS.access, LS.refresh, LS.expires, LS.verifier, LS.scope, 'sp_state'].forEach((k) => {
     try { localStorage.removeItem(k); } catch (e) {}
   });
 }
@@ -135,6 +160,7 @@ function storeToken(data) {
   try {
     if (data.access_token) localStorage.setItem(LS.access, data.access_token);
     if (data.refresh_token) localStorage.setItem(LS.refresh, data.refresh_token);
+    if (data.scope != null) localStorage.setItem(LS.scope, data.scope);
     const ttl = (data.expires_in || 3600) * 1000;
     localStorage.setItem(LS.expires, String(Date.now() + ttl));
   } catch (e) { /* ignore */ }

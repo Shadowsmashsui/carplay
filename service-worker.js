@@ -1,6 +1,6 @@
 /* Service Worker — Network-First für die eigene App (immer frisch online,
    offline aus dem Cache). Spotify-Domains werden NIE angefasst. */
-const CACHE = 'carplay-v3';
+const CACHE = 'carplay-v4';
 const ASSETS = [
   '.',
   'index.html',

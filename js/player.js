@@ -134,7 +134,7 @@ async function pollNow() {
 }
 
 function handleErr(e) {
-  if (e && e.name === 'NoTokenError') { showHint('login'); last = null; return; }
+  if (e && (e.name === 'NoTokenError' || e.name === 'ForbiddenError')) { showHint('login'); last = null; return; }
   if (e && e.name === 'RateLimitError') { pollIntervalMs = Math.min(8000, (e.retryAfter || 1) * 1000); return; }
   // 404 o.ä. (kein aktives Gerät) -> Idle-Hinweis
   showHint('idle'); last = null;

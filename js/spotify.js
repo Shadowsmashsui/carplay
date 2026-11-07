@@ -24,7 +24,7 @@ function q(params) {
 }
 
 async function request(method, path, body, _retried = false) {
-  const token = await getAccessToken();
+  const token = await getAccessToken(_retried); // beim 401-Retry Refresh erzwingen
   if (!token) throw new NoTokenError();
 
   const headers = { Authorization: `Bearer ${token}` };
@@ -87,7 +87,7 @@ export function setShuffle(state) {
 /* ---------- Playlists ---------- */
 export async function getPlaylists() {
   const data = await request('GET', '/me/playlists?limit=50');
-  return data && data.items ? data.items : [];
+  return data && data.items ? data.items.filter(Boolean) : [];
 }
 export function startContext(contextUri, deviceId) {
   return play({ context_uri: contextUri, deviceId });
@@ -126,7 +126,7 @@ export async function getQueue() {
   const data = await request('GET', '/me/player/queue');
   return {
     current: data ? data.currently_playing : null,
-    queue: data && data.queue ? data.queue : [],
+    queue: data && data.queue ? data.queue.filter(Boolean) : [],
   };
 }
 export function addToQueue(uri, deviceId) {
