@@ -681,7 +681,9 @@ body {
   display: grid; grid-auto-flow: column; grid-auto-columns: 132px;
   gap: 16px; overflow-x: auto; padding-bottom: 6px;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;        /* Firefox: Scrollbar ausblenden */
 }
+.cover-row::-webkit-scrollbar { display: none; }  /* WebKit/Safari */
 .cover-card { border: none; background: none; cursor: pointer; text-align: left; color: var(--text); display: flex; flex-direction: column; gap: 7px; }
 .cover-img {
   width: 132px; height: 132px; border-radius: 12px;

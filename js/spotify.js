@@ -113,9 +113,11 @@ export function playUris(uris, deviceId) {
 }
 
 /* ---------- Suche ---------- */
-export async function search(query, types = 'track,playlist,album', limit = 20) {
+export async function search(query, types = 'track,playlist,album', limit = 10) {
   if (!query || !query.trim()) return { tracks: [], playlists: [], albums: [] };
-  const data = await request('GET', `/search?${q({ q: query, type: types, limit })}`);
+  // Spotify begrenzt die Suche bei dieser App auf max. limit=10 (sonst 400 "Invalid limit").
+  const lim = Math.min(10, Math.max(1, limit));
+  const data = await request('GET', `/search?${q({ q: query, type: types, limit: lim })}`);
   return {
     tracks: data && data.tracks ? data.tracks.items.filter(Boolean) : [],
     playlists: data && data.playlists ? data.playlists.items.filter(Boolean) : [],
