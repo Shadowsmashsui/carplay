@@ -1,6 +1,6 @@
 /* Service Worker — Network-First für die eigene App (immer frisch online,
    offline aus dem Cache). Spotify-Domains werden NIE angefasst. */
-const CACHE = 'carplay-v5';
+const CACHE = 'carplay-v6';
 const ASSETS = [
   '.',
   'index.html',
@@ -49,11 +49,20 @@ self.addEventListener('fetch', (e) => {
   if (url.hostname.endsWith('spotify.com')) return;
   if (e.request.method !== 'GET') return;
 
-  // Network-First: immer zuerst frisch aus dem Netz holen, Cache nur als
-  // Offline-Fallback. So wirken neue Deploys (z. B. config.js) sofort.
+  // Network-First mit Server-Revalidierung: Same-Origin-Dateien per
+  // cache:'no-cache' immer gegen den Server prüfen (schnelles 304 wenn gleich,
+  // frisches 200 wenn geändert). Sonst würde der HTTP-Cache alte JS/CSS bis zu
+  // 10 Min halten und frische Deploys erst verzögert greifen. Cache nur als
+  // Offline-Fallback.
+  const sameOrigin = url.origin === self.location.origin;
+  let networkReq = e.request;
+  if (sameOrigin) {
+    try { networkReq = new Request(e.request, { cache: 'no-cache' }); }
+    catch (err) { networkReq = e.request; }
+  }
   e.respondWith(
-    fetch(e.request).then((res) => {
-      if (url.origin === self.location.origin && res.ok) {
+    fetch(networkReq).then((res) => {
+      if (sameOrigin && res.ok) {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(e.request, copy));
       }
